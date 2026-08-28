@@ -1,6 +1,1 @@
-{
-  "name":"@vanta/desktop","version":"0.2.0","private":true,"main":"src/electron-main.cjs",
-  "scripts":{"build":"tsc -p tsconfig.json","dev":"electron .","start":"electron .","package":"electron-builder --win nsis"},
-  "dependencies":{"ws":"^8.18.3"},
-  "devDependencies":{"electron":"43.4.0","electron-builder":"^26.15.3","typescript":"^5.6.2"}
-}
+{"name":"@vanta/desktop","version":"0.2.0","private":true,"main":"src/electron-main.cjs","scripts":{"build":"tsc -p tsconfig.json","dev":"electron .","start":"electron .","package":"electron-builder --win nsis"},"dependencies":{"ws":"^8.18.3"},"devDependencies":{"@types/node":"^22.0.0","@types/ws":"^8.18.1","electron":"43.4.0","electron-builder":"^26.15.3","tsx":"^4.20.0","typescript":"^5.6.2"}}

@@ -8,5 +8,5 @@ import { randomInt } from "node:crypto";
  */
 export function generateVantaIdCandidate(): string {
   const number = randomInt(100000, 999999);
-  return `VLR-${number}`;
+  return `VNT-${number}`;
 }

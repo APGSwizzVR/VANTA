@@ -9,7 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     services:
       postgres:
         image: postgres:16-alpine
@@ -24,13 +23,11 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://vanta:vanta_test_password@localhost:5432/vanta_test?schema=public
       JWT_SECRET: ci_test_secret_do_not_use_in_production_0000
       REALTIME_JWT_SECRET: ci_test_secret_do_not_use_in_production_0000
-
     steps:
       - uses: actions/checkout@v4
 
@@ -41,10 +38,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm --filter @vanta/api exec prisma generate

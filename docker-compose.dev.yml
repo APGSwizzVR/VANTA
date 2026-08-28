@@ -1,0 +1,25 @@
+# Local development infrastructure for VANTA.
+# This is intentionally minimal: one Postgres container. Everything
+# else (API, realtime, web) runs directly via `pnpm dev` on the host
+# so you get fast reload without rebuilding Docker images.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vanta-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vanta
+      POSTGRES_PASSWORD: vanta_dev_password
+      POSTGRES_DB: vanta
+    ports:
+      - "5432:5432"
+    volumes:
+      - vanta_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vanta"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  vanta_postgres_data:

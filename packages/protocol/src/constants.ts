@@ -1,4 +1,26 @@
-export const PROTOCOL_VERSION = 1;
+/** Current wire protocol identifier, sent in every CONNECT message. */
+export const PROTOCOL_VERSION = "VANTA/1" as const;
+
+/** Server-enforced bounds used by the Zod schemas below. */
+export const LIMITS = {
+  CALLSIGN_MIN_LENGTH: 2,
+  CALLSIGN_MAX_LENGTH: 12,
+  LATITUDE_MIN: -90,
+  LATITUDE_MAX: 90,
+  LONGITUDE_MIN: -180,
+  LONGITUDE_MAX: 180,
+  ALTITUDE_MIN_FEET: -1500,
+  ALTITUDE_MAX_FEET: 60000,
+  HEADING_MIN: 0,
+  HEADING_MAX: 359.9,
+  GROUND_SPEED_MAX_KTS: 900,
+  VERTICAL_SPEED_MAX_FPM: 12000,
+  FREQUENCY_MIN_MHZ: 118.0,
+  FREQUENCY_MAX_MHZ: 137.0,
+  EMERGENCY_FREQUENCY_MHZ: 121.5,
+  SQUAWK_MIN: 0,
+  SQUAWK_MAX: 7777,
+} as const;
 
 export const MESSAGE_TYPES = {
   CONNECT: "CONNECT",
@@ -16,7 +38,7 @@ export const MESSAGE_TYPES = {
   VOICE_METADATA: "VOICE_METADATA",
   AIRCRAFT_UPDATE: "AIRCRAFT_UPDATE",
   PING: "PING",
-  PONG: "PONG"
+  PONG: "PONG",
 } as const;
 
 export const DEFAULT_RADIO_RANGE_NM = 150;

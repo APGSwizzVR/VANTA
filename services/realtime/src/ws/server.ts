@@ -7,6 +7,7 @@ import { networkState } from "../state/network-state.js";
 import { ClientConnection } from "./connection.js";
 import { connections, broadcast } from "./broadcast.js";
 import { handleInboundMessage } from "./handlers.js";
+import { handleVoiceFrame } from "./voice.js";
 
 const AUTH_TIMEOUT_MS = 10_000;
 const HEARTBEAT_INTERVAL_MS = 15_000;
@@ -26,9 +27,10 @@ export function createRealtimeServer(httpServer: HttpServer): WebSocketServer {
       }
     }, AUTH_TIMEOUT_MS);
 
-    socket.on("message", (data) => {
+    socket.on("message", (data, isBinary) => {
       try {
-        handleInboundMessage(connection, data.toString());
+        if (isBinary) handleVoiceFrame(connection, Buffer.isBuffer(data) ? data : Buffer.from(data as ArrayBuffer));
+        else handleInboundMessage(connection, data.toString());
       } catch (error) {
         logger.error({ error }, "Unhandled error processing inbound message");
       }

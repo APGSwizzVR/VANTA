@@ -22,6 +22,9 @@ export class ClientConnection {
   callsign: string | null = null;
   /** ATC position callsigns (e.g. "EIDW_TWR") this connection currently holds. */
   atcPositions = new Set<string>();
+  voiceFrequencyMhz: number | null = null;
+  voiceFrequencies: number[] = [];
+  voiceCallsign: string | null = null;
 
   lastPongAt = Date.now();
   lastKnownLat: number | null = null;

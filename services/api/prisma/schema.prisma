@@ -1,0 +1,295 @@
+// Vanta Network — Prisma schema
+// Run `pnpm db:migrate` (from repo root) to apply migrations locally.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users & sessions
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  PILOT
+  ATC
+  ADMIN
+  MODERATOR
+}
+
+enum ModerationStatus {
+  ACTIVE
+  WARNED
+  SUSPENDED
+  BANNED
+}
+
+model User {
+  id               String            @id @default(uuid())
+  vantaId         String            @unique // human-facing ID, e.g. VLR-104233
+  username         String            @unique
+  displayName      String
+  email            String            @unique
+  passwordHash     String // argon2id hash, never plaintext
+  roles            UserRole[]        @default([PILOT])
+  moderationStatus ModerationStatus  @default(ACTIVE)
+  totalFlightHours Float             @default(0)
+  totalAtcHours    Float             @default(0)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  sessions        Session[]
+  flightPlans     FlightPlan[]
+  atcPositions    AtcPosition[]
+  aircraftSessions AircraftSession[]
+  connections     Connection[]
+  networkEvents   NetworkEvent[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique // SHA-256 of the issued JWT, for revocation lookups
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+  ipAddress String?
+  userAgent String?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Airports / navigation data (populated by packages/airport-data importer)
+// ---------------------------------------------------------------------------
+
+enum AirportType {
+  large_airport
+  medium_airport
+  small_airport
+  heliport
+  seaplane_base
+  closed
+}
+
+model Airport {
+  icao          String       @id
+  iata          String?
+  name          String
+  country       String
+  region        String
+  latitude      Float
+  longitude     Float
+  elevationFeet Int?
+  type          AirportType
+  updatedAt     DateTime     @updatedAt
+
+  runways     Runway[]
+  frequencies Frequency[]
+  atcPositions AtcPosition[]
+
+  @@index([country])
+  @@map("airports")
+}
+
+enum RunwaySurface {
+  ASPHALT
+  CONCRETE
+  GRASS
+  GRAVEL
+  WATER
+  DIRT
+  OTHER
+}
+
+model Runway {
+  id               String        @id @default(uuid())
+  airportIcao      String
+  airport          Airport       @relation(fields: [airportIcao], references: [icao], onDelete: Cascade)
+  lengthFeet       Int?
+  widthFeet        Int?
+  surface          RunwaySurface @default(OTHER)
+  lowIdent         String?
+  lowHeadingDegrees Float?
+  highIdent        String?
+  highHeadingDegrees Float?
+
+  @@index([airportIcao])
+  @@map("runways")
+}
+
+enum FrequencyType {
+  DEL
+  GND
+  TWR
+  APP
+  DEP
+  CTR
+  FSS
+  ATIS
+  UNICOM
+  AWOS
+  OTHER
+}
+
+model Frequency {
+  id            String        @id @default(uuid())
+  airportIcao   String
+  airport       Airport       @relation(fields: [airportIcao], references: [icao], onDelete: Cascade)
+  type          FrequencyType
+  description   String
+  frequencyMhz  Float
+
+  @@index([airportIcao])
+  @@map("frequencies")
+}
+
+enum NavaidType {
+  VOR
+  NDB
+  DME
+  TACAN
+  VORTAC
+  OTHER
+}
+
+model Navaid {
+  id                    String     @id @default(uuid())
+  ident                 String
+  name                  String
+  type                  NavaidType
+  frequency             Float?
+  latitude              Float
+  longitude             Float
+  associatedAirportIcao String?
+
+  @@index([ident])
+  @@map("navaids")
+}
+
+// ---------------------------------------------------------------------------
+// Live network state
+// ---------------------------------------------------------------------------
+
+model AircraftSession {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  callsign      String
+  aircraftType  String?
+  simulator     String // SimulatorKind: MSFS2020 | MSFS2024 | UNKNOWN
+  startedAt     DateTime @default(now())
+  endedAt       DateTime?
+  lastLatitude  Float?
+  lastLongitude Float?
+
+  @@index([userId])
+  @@index([callsign])
+  @@map("aircraft_sessions")
+}
+
+enum FlightRules {
+  VFR
+  IFR
+}
+
+model FlightPlan {
+  id                 String      @id @default(uuid())
+  userId             String
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  callsign           String
+  aircraftType       String
+  departureIcao      String
+  destinationIcao    String
+  alternateIcao      String?
+  route              String
+  cruiseAltitudeFeet Int
+  flightRules        FlightRules
+  departureTimeUtc   DateTime?
+  remarks            String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([callsign])
+  @@map("flight_plans")
+}
+
+enum AtcPositionType {
+  DEL
+  GND
+  TWR
+  APP
+  DEP
+  CTR
+  FSS
+}
+
+model AtcPosition {
+  id             String          @id @default(uuid())
+  airportIcao    String
+  airport        Airport         @relation(fields: [airportIcao], references: [icao], onDelete: Cascade)
+  positionType   AtcPositionType
+  callsign       String // e.g. EIDW_TWR
+  frequencyMhz   Float
+  online         Boolean         @default(false)
+  controllerId   String?
+  controller     User?           @relation(fields: [controllerId], references: [id])
+  onlineSince    DateTime?
+
+  // Prevents two controllers from simultaneously occupying the same position.
+  @@unique([airportIcao, positionType])
+  @@index([controllerId])
+  @@map("atc_positions")
+}
+
+enum ConnectionKind {
+  PILOT
+  ATC
+  OBSERVER
+}
+
+model Connection {
+  id         String         @id @default(uuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind       ConnectionKind
+  callsign   String
+  ipAddress  String?
+  connectedAt DateTime      @default(now())
+  disconnectedAt DateTime?
+
+  @@index([userId])
+  @@map("connections")
+}
+
+enum NetworkEventType {
+  CONNECT
+  DISCONNECT
+  FLIGHT_PLAN_FILED
+  ATC_POSITION_OPENED
+  ATC_POSITION_CLOSED
+  MODERATION_ACTION
+  AUTH_FAILURE
+}
+
+model NetworkEvent {
+  id        String           @id @default(uuid())
+  userId    String?
+  user      User?            @relation(fields: [userId], references: [id])
+  type      NetworkEventType
+  detail    Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@map("network_events")
+}

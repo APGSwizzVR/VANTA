@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env files
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Prisma
+services/api/prisma/dev.db
+
+# Test/coverage
+coverage/
+.nyc_output/
+
+# Electron client build
+apps/client/out/
+apps/client/release/
+
+# Airport data downloads (regenerable)
+packages/airport-data/data/*.csv
+
+# Misc
+*.local
+.turbo/

@@ -3,7 +3,7 @@ import {
   encodeMessage,
   ProtocolParseError,
   PROTOCOL_VERSION,
-  type VolaraMessageLike,
+  type VantaMessage,
 } from "@vanta/protocol";
 import type { AircraftState } from "@vanta/types";
 import { logger } from "../lib/logger.js";
@@ -19,7 +19,7 @@ function envelope() {
 
 function sendError(connection: ClientConnection, code: string, message: string): void {
   connection.send(
-    encodeMessage({ ...envelope(), type: "ERROR", code, message } as VolaraMessageLike)
+    encodeMessage({ ...envelope(), type: "ERROR", code, message } as VantaMessage)
   );
 }
 
@@ -30,7 +30,7 @@ function sendError(connection: ClientConnection, code: string, message: string):
  * type. Nothing downstream ever sees an unvalidated payload.
  */
 export function handleInboundMessage(connection: ClientConnection, raw: string): void {
-  let message: VolaraMessageLike;
+  let message: VantaMessage;
   try {
     message = decodeMessage(raw);
   } catch (error) {
@@ -113,7 +113,7 @@ export function handleInboundMessage(connection: ClientConnection, raw: string):
 
     case "PING": {
       connection.lastPongAt = Date.now();
-      connection.send(encodeMessage({ ...envelope(), type: "PONG" } as VolaraMessageLike));
+      connection.send(encodeMessage({ ...envelope(), type: "PONG" } as VantaMessage));
       break;
     }
 
@@ -123,7 +123,11 @@ export function handleInboundMessage(connection: ClientConnection, raw: string):
     }
 
     default: {
-      sendError(connection, "UNSUPPORTED_TYPE", `Server does not handle message type: ${(message as { type: string }).type}`);
+      sendError(
+        connection,
+        "UNSUPPORTED_TYPE",
+        `Server does not handle message type: ${(message as { type: string }).type}`
+      );
     }
   }
 }
@@ -138,7 +142,7 @@ function requireAuth(connection: ClientConnection): boolean {
 
 function handleAuth(
   connection: ClientConnection,
-  message: Extract<VolaraMessageLike, { type: "AUTH" }>
+  message: Extract<VantaMessage, { type: "AUTH" }>
 ): void {
   try {
     const payload = verifyToken(message.token);
@@ -154,13 +158,13 @@ function handleAuth(
         type: "AUTH_OK",
         userId: payload.sub,
         vantaId: payload.vantaId,
-      } as VolaraMessageLike)
+      } as VantaMessage)
     );
     logger.info({ userId: payload.sub, role: message.role }, "Connection authenticated");
   } catch (error) {
     logger.warn({ error }, "AUTH failed: invalid token");
     connection.send(
-      encodeMessage({ ...envelope(), type: "AUTH_FAIL", reason: "Invalid or expired token" } as VolaraMessageLike)
+      encodeMessage({ ...envelope(), type: "AUTH_FAIL", reason: "Invalid or expired token" } as VantaMessage)
     );
     connection.socket.close(4001, "Authentication failed");
   }
@@ -168,7 +172,7 @@ function handleAuth(
 
 function handlePilotUpdate(
   connection: ClientConnection,
-  message: Extract<VolaraMessageLike, { type: "PILOT_UPDATE" }>
+  message: Extract<VantaMessage, { type: "PILOT_UPDATE" }>
 ): void {
   if (!requireAuth(connection)) return;
 

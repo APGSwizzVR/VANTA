@@ -1,6 +1,6 @@
 import { WebSocketServer, type WebSocket } from "ws";
 import type { Server as HttpServer } from "node:http";
-import { encodeMessage, PROTOCOL_VERSION, type VolaraMessageLike } from "@vanta/protocol";
+import { encodeMessage, PROTOCOL_VERSION, type VantaMessage } from "@vanta/protocol";
 import { env } from "../lib/env.js";
 import { logger } from "../lib/logger.js";
 import { networkState } from "../state/network-state.js";
@@ -50,7 +50,7 @@ export function createRealtimeServer(httpServer: HttpServer): WebSocketServer {
             ts: Date.now(),
             type: "PILOT_DISCONNECT",
             callsign: connection.callsign,
-          } as VolaraMessageLike)
+          } as VantaMessage)
         );
       }
 
